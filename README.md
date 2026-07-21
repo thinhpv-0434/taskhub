@@ -1,2 +1,1 @@
-# taskhub
-Learning Python, FastAPI
+# TaskHub
