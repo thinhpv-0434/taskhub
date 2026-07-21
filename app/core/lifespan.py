@@ -1,17 +1,11 @@
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+from typing import AsyncIterator
 
-from fastapi import FastAPI
+from ..db.session import engine, init_db
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    # Startup: init resources
-    app.state.db = {"connected": True, "items": {}}
-    print("[lifespan] startup: in-memory db initialized")
-    try:
-        yield
-    finally:
-        # Shutdown: cleanup
-        app.state.db.clear()
-        print("[lifespan] shutdown: in-memory db cleaned")
+async def lifespan(app) -> AsyncIterator[None]:
+    await init_db()
+    yield
+    await engine.dispose()
