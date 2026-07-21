@@ -1,11 +1,11 @@
-from fastapi import Depends, Request
+from typing import AsyncGenerator
 
-from ..services.item_service import ItemService
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ..db.session import get_db
+from ..services.task_service import TaskService
 
 
-def get_db(request: Request):
-    return request.app.state.db
-
-
-def get_item_service(db=Depends(get_db)) -> ItemService:
-    return ItemService(db)
+async def get_task_service(db: AsyncSession = Depends(get_db)) -> AsyncGenerator[TaskService, None]:
+    yield TaskService(db)
