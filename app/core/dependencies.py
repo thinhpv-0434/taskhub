@@ -1,6 +1,6 @@
 from typing import AsyncGenerator
 
-from fastapi import Depends, HTTPException, Security, status
+from fastapi import Depends, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +11,7 @@ from ..db.session import get_db
 from ..services.auth_service import AuthService
 from ..services.task_service import TaskService
 from ..services.user_service import UserService
+from ..core.exceptions import ForbiddenException, UnauthorizedException
 
 
 async def get_task_service(db: AsyncSession = Depends(get_db)) -> AsyncGenerator[TaskService, None]:
@@ -33,24 +34,16 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db),
 ) -> User:
     if not credentials or credentials.scheme.lower() != "bearer":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid authorization token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise UnauthorizedException(detail="Missing or invalid authorization token")
 
     payload = decode_token(credentials.credentials)
     if not payload or "sub" not in payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise UnauthorizedException(detail="Invalid or expired token")
 
     result = await db.execute(select(User).where(User.id == payload["sub"]))
     user = result.scalars().first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise UnauthorizedException(detail="User not found")
 
     return user
 
@@ -72,7 +65,7 @@ def require_roles(*roles):
 
         allowed = {r.value if isinstance(r, _UserRole) else str(r) for r in roles}
         if current not in allowed:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+            raise ForbiddenException(detail="Forbidden")
         return user
 
     return _dep
