@@ -1,11 +1,12 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 
 from ...core.dependencies import get_user_service, get_current_user, require_roles
 from ...schemas.user import UserCreate, UserRead, UserUpdate, UserRole
 from ...services.user_service import UserService
 from ...db.models import User
+from ...core.exceptions import NotFoundException
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
@@ -45,5 +46,5 @@ async def update_me(
 async def get_user(user_id: str, service: UserService = Depends(get_user_service)) -> UserRead:
     user = await service.get(user_id)
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise NotFoundException(detail="User not found")
     return user
