@@ -45,9 +45,9 @@ class AuthService:
         if not user.is_active:
             raise ValueError("User account is inactive")
 
-        # Create tokens
-        access_token = create_access_token(data={"sub": user.id, "email": user.email})
-        refresh_token = create_refresh_token(data={"sub": user.id, "email": user.email})
+        # Create tokens (include role for RBAC)
+        access_token = create_access_token(data={"sub": user.id, "email": user.email, "role": getattr(user, "role", "MEMBER")})
+        refresh_token = create_refresh_token(data={"sub": user.id, "email": user.email, "role": getattr(user, "role", "MEMBER")})
 
         return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
@@ -69,9 +69,9 @@ class AuthService:
         if not user or not user.is_active:
             raise ValueError("User not found or inactive")
 
-        # Create new tokens
-        access_token = create_access_token(data={"sub": user.id, "email": user.email})
-        new_refresh_token = create_refresh_token(data={"sub": user.id, "email": user.email})
+        # Create new tokens (preserve role)
+        access_token = create_access_token(data={"sub": user.id, "email": user.email, "role": getattr(user, "role", "MEMBER")})
+        new_refresh_token = create_refresh_token(data={"sub": user.id, "email": user.email, "role": getattr(user, "role", "MEMBER")})
 
         return TokenResponse(access_token=access_token, refresh_token=new_refresh_token)
 
