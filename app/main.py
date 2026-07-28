@@ -6,6 +6,7 @@ from .core.lifespan import lifespan
 from .api.v1.endpoints import router as api_router
 from .api.v1.auth import router as auth_router
 from .api.v1.users import router as user_router
+from .api.v1.workspaces import router as workspace_router
 from .core.exceptions import (
     AppException,
     app_exception_handler,
@@ -24,6 +25,7 @@ app.add_exception_handler(Exception, generic_exception_handler)
 app.include_router(api_router)
 app.include_router(auth_router)
 app.include_router(user_router)
+app.include_router(workspace_router)
 
 @app.get("/", include_in_schema=False)
 async def root():

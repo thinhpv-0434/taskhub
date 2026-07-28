@@ -11,6 +11,7 @@ from ..db.session import get_db
 from ..services.auth_service import AuthService
 from ..services.task_service import TaskService
 from ..services.user_service import UserService
+from ..services.workspace_service import WorkspaceService
 from ..core.exceptions import ForbiddenException, UnauthorizedException
 
 
@@ -24,6 +25,10 @@ async def get_auth_service(db: AsyncSession = Depends(get_db)) -> AsyncGenerator
 
 async def get_user_service(db: AsyncSession = Depends(get_db)) -> AsyncGenerator[UserService, None]:
     yield UserService(db)
+
+
+async def get_workspace_service(db: AsyncSession = Depends(get_db)) -> AsyncGenerator[WorkspaceService, None]:
+    yield WorkspaceService(db)
 
 
 security = HTTPBearer(auto_error=False)
