@@ -1,8 +1,15 @@
 from datetime import datetime
+from enum import Enum
 
 from pydantic import BaseModel, Field
 
 from .user import UserRead
+
+
+class WorkspaceRole(str, Enum):
+    OWNER = "OWNER"
+    EDITOR = "EDITOR"
+    VIEWER = "VIEWER"
 
 
 class WorkspaceBase(BaseModel):
@@ -16,7 +23,7 @@ class WorkspaceCreate(WorkspaceBase):
 
 class WorkspaceMemberCreate(BaseModel):
     user_id: str
-    role: str | None = None
+    role: WorkspaceRole = WorkspaceRole.EDITOR
 
 
 class WorkspaceRead(WorkspaceBase):

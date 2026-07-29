@@ -43,7 +43,11 @@ async def update_me(
 
 
 @router.get("/id/{user_id}", response_model=UserRead)
-async def get_user(user_id: str, service: UserService = Depends(get_user_service)) -> UserRead:
+async def get_user(
+    user_id: str,
+    service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_user),
+) -> UserRead:
     user = await service.get(user_id)
     if not user:
         raise NotFoundException(detail="User not found")
