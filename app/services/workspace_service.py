@@ -24,18 +24,18 @@ class WorkspaceService:
         )
         self.db.add(workspace)
         await self.db.flush()
-
-        membership = WorkspaceMember(workspace_id=workspace.id, user_id=owner.id)
+        # create owner membership with OWNER role
+        membership = WorkspaceMember(workspace_id=workspace.id, user_id=owner.id, role="OWNER")
         self.db.add(membership)
 
         await self.db.commit()
-        await self.db.refresh(workspace)
-        return workspace
+        return await self.get(workspace.id)
 
     async def get(self, workspace_id: str) -> Workspace | None:
         result = await self.db.execute(
             select(Workspace)
             .where(Workspace.id == workspace_id)
+            .execution_options(populate_existing=True)
             .options(
                 selectinload(Workspace.owner),
                 selectinload(Workspace.members).selectinload(WorkspaceMember.user),
@@ -43,7 +43,7 @@ class WorkspaceService:
         )
         return result.scalars().first()
 
-    async def add_member(self, workspace_id: str, user_id: str) -> Workspace:
+    async def add_member(self, workspace_id: str, user_id: str, role: str | None = None) -> Workspace:
         workspace = await self.get(workspace_id)
         if not workspace:
             raise ValueError("Workspace not found")
@@ -62,11 +62,10 @@ class WorkspaceService:
         if existing_result.scalars().first():
             raise ValueError("User is already a workspace member")
 
-        membership = WorkspaceMember(workspace_id=workspace_id, user_id=user_id)
+        membership = WorkspaceMember(workspace_id=workspace_id, user_id=user_id, role=role or "EDITOR")
         self.db.add(membership)
         await self.db.commit()
-        await self.db.refresh(workspace)
-        return workspace
+        return await self.get(workspace_id)
 
     async def remove_member(self, workspace_id: str, user_id: str) -> None:
         membership_result = await self.db.execute(
