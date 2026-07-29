@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ..db.models import Comment, Label, Project, Task
+from ..db.models import Comment, Label, Project, Task, TaskStatus
 from ..schemas.comment import CommentCreate, CommentRead
 from ..schemas.task import TaskCreate, TaskRead
 
@@ -38,7 +38,7 @@ class TaskService:
         project_id: str,
         page: int = 1,
         limit: int = 20,
-        status: str | None = None,
+        status: TaskStatus | None = None,
         priority: int | None = None,
         assignee_id: str | None = None,
     ) -> list[TaskRead]:

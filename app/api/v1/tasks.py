@@ -1,8 +1,9 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from ...core.dependencies import get_task_service, get_project_service, get_current_user, get_workspace_service
+from ...db.models import TaskStatus
 from ...schemas.comment import CommentCreate, CommentRead
 from ...schemas.task import TaskCreate, TaskRead, TaskUpdate
 from ...services.task_service import TaskService
@@ -38,8 +39,23 @@ async def create_task_under_project(
 
 
 @router.get("/projects/{project_id}/tasks", response_model=List[TaskRead])
-async def list_tasks_by_project(project_id: str, service: TaskService = Depends(get_task_service)) -> List[TaskRead]:
-    return await service.list_by_project(project_id)
+async def list_tasks_by_project(
+    project_id: str,
+    status_filter: TaskStatus | None = Query(default=None, alias="status"),
+    priority: int | None = Query(default=None),
+    assignee_id: str | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=20, ge=1, le=100),
+    service: TaskService = Depends(get_task_service),
+) -> List[TaskRead]:
+    return await service.list_by_project(
+        project_id,
+        page=page,
+        limit=limit,
+        status=status_filter,
+        priority=priority,
+        assignee_id=assignee_id,
+    )
 
 
 @router.get("/tasks/{task_id}", response_model=TaskRead)
