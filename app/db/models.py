@@ -37,11 +37,13 @@ class Project(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
+    workspace_id = Column(String(36), ForeignKey("workspaces.id"), nullable=True)
     owner_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     owner = relationship("User", back_populates="projects")
     tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
+    workspace = relationship("Workspace", back_populates="projects")
 
 
 class Task(Base):
@@ -73,10 +75,15 @@ class Workspace(Base):
 
     owner = relationship("User", back_populates="workspaces_owned")
     members = relationship("WorkspaceMember", back_populates="workspace", cascade="all, delete-orphan")
+    projects = relationship("Project", back_populates="workspace", cascade="all, delete-orphan")
 
     @property
     def member_users(self):
         return [member.user for member in self.members]
+
+    @property
+    def member_roles(self):
+        return {member.user_id: member.role for member in self.members}
 
 
 class WorkspaceMember(Base):
@@ -84,6 +91,7 @@ class WorkspaceMember(Base):
 
     workspace_id = Column(String(36), ForeignKey("workspaces.id"), primary_key=True)
     user_id = Column(String(36), ForeignKey("users.id"), primary_key=True)
+    role = Column(String(20), nullable=False, default="EDITOR")
 
     workspace = relationship("Workspace", back_populates="members")
     user = relationship("User", back_populates="workspace_memberships")

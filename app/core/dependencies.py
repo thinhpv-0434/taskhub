@@ -10,6 +10,7 @@ from ..db.models import User
 from ..db.session import get_db
 from ..services.auth_service import AuthService
 from ..services.task_service import TaskService
+from ..services.project_service import ProjectService
 from ..services.user_service import UserService
 from ..services.workspace_service import WorkspaceService
 from ..core.exceptions import ForbiddenException, UnauthorizedException
@@ -17,6 +18,10 @@ from ..core.exceptions import ForbiddenException, UnauthorizedException
 
 async def get_task_service(db: AsyncSession = Depends(get_db)) -> AsyncGenerator[TaskService, None]:
     yield TaskService(db)
+
+
+async def get_project_service(db: AsyncSession = Depends(get_db)) -> AsyncGenerator[ProjectService, None]:
+    yield ProjectService(db)
 
 
 async def get_auth_service(db: AsyncSession = Depends(get_db)) -> AsyncGenerator[AuthService, None]:

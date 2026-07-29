@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from ...core.dependencies import get_user_service, get_current_user, require_roles
 from ...schemas.user import UserCreate, UserRead, UserUpdate, UserRole

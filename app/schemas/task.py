@@ -18,6 +18,15 @@ class TaskCreate(TaskBase):
     assignee_id: str | None = None
 
 
+class TaskUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    status: str | None = None
+    priority: int | None = None
+    due_date: datetime | None = None
+    assignee_id: str | None = None
+
+
 class TaskRead(TaskBase):
     id: str
     project: ProjectRead | None = None

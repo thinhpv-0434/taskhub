@@ -50,7 +50,7 @@ async def add_workspace_member(
     if current_user.id != workspace.owner_id:
         raise ForbiddenException(detail="Only the workspace owner may add members")
 
-    workspace = await service.add_member(workspace_id, payload.user_id)
+    workspace = await service.add_member(workspace_id, payload.user_id, role=payload.role)
     return WorkspaceRead.model_validate(workspace)
 
 
