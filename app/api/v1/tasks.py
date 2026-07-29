@@ -3,6 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ...core.dependencies import get_task_service, get_project_service, get_current_user, get_workspace_service
+from ...schemas.comment import CommentCreate, CommentRead
 from ...schemas.task import TaskCreate, TaskRead, TaskUpdate
 from ...services.task_service import TaskService
 from ...services.project_service import ProjectService
@@ -47,6 +48,39 @@ async def get_task(task_id: str, service: TaskService = Depends(get_task_service
     if not obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     return obj
+
+
+@router.post("/tasks/{task_id}/labels/{label_id}", response_model=TaskRead)
+async def add_task_label(
+    task_id: str,
+    label_id: str,
+    service: TaskService = Depends(get_task_service),
+    current_user=Depends(get_current_user),
+) -> TaskRead:
+    try:
+        task = await service.add_label(task_id, label_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    return task
+
+
+@router.post(
+    "/tasks/{task_id}/comments",
+    response_model=CommentRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_task_comment(
+    task_id: str,
+    payload: CommentCreate,
+    service: TaskService = Depends(get_task_service),
+    current_user=Depends(get_current_user),
+) -> CommentRead:
+    comment = await service.create_comment(task_id, current_user.id, payload)
+    if not comment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    return comment
 
 
 @router.patch("/tasks/{task_id}", response_model=TaskRead)

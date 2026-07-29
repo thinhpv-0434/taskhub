@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Table, Text
 from sqlalchemy.orm import relationship
 
 from .base import Base
@@ -12,6 +12,14 @@ class TaskStatus(str, enum.Enum):
     todo = "todo"
     in_progress = "in_progress"
     done = "done"
+
+
+task_labels = Table(
+    "task_labels",
+    Base.metadata,
+    Column("task_id", String(36), ForeignKey("tasks.id", ondelete="CASCADE"), primary_key=True),
+    Column("label_id", String(36), ForeignKey("labels.id", ondelete="CASCADE"), primary_key=True),
+)
 
 
 class User(Base):
@@ -27,6 +35,7 @@ class User(Base):
 
     projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="assignee", cascade="all, delete-orphan")
+    comments = relationship("Comment", back_populates="author", cascade="all, delete-orphan")
     workspaces_owned = relationship("Workspace", back_populates="owner", cascade="all, delete-orphan")
     workspace_memberships = relationship("WorkspaceMember", back_populates="user", cascade="all, delete-orphan")
 
@@ -62,6 +71,32 @@ class Task(Base):
 
     project = relationship("Project", back_populates="tasks")
     assignee = relationship("User", back_populates="tasks")
+    labels = relationship("Label", secondary=task_labels, back_populates="tasks")
+    comments = relationship("Comment", back_populates="task", cascade="all, delete-orphan")
+
+
+class Label(Base):
+    __tablename__ = "labels"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String(100), nullable=False, unique=True)
+    color = Column(String(20), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    tasks = relationship("Task", secondary=task_labels, back_populates="labels")
+
+
+class Comment(Base):
+    __tablename__ = "comments"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    content = Column(Text, nullable=False)
+    task_id = Column(String(36), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    author_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    task = relationship("Task", back_populates="comments")
+    author = relationship("User", back_populates="comments")
 
 
 class Workspace(Base):

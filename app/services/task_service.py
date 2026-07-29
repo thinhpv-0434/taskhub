@@ -4,7 +4,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ..db.models import Project, Task
+from ..db.models import Comment, Label, Project, Task
+from ..schemas.comment import CommentCreate, CommentRead
 from ..schemas.task import TaskCreate, TaskRead
 
 
@@ -25,6 +26,8 @@ class TaskService:
             .options(
                 selectinload(Task.project).selectinload(Project.owner),
                 selectinload(Task.assignee),
+                selectinload(Task.labels),
+                selectinload(Task.comments).selectinload(Comment.author),
             )
         )
         task = result.scalars().first()
@@ -45,6 +48,8 @@ class TaskService:
             .options(
                 selectinload(Task.project).selectinload(Project.owner),
                 selectinload(Task.assignee),
+                selectinload(Task.labels),
+                selectinload(Task.comments).selectinload(Comment.author),
             )
         )
         if status is not None:
@@ -71,6 +76,53 @@ class TaskService:
         self.db.add(task)
         await self.db.commit()
         return await self.get(task_id)
+
+    async def add_label(self, task_id: str, label_id: str) -> Optional[TaskRead]:
+        result = await self.db.execute(
+            select(Task)
+            .where(Task.id == task_id)
+            .options(selectinload(Task.labels))
+        )
+        task = result.scalars().first()
+        if not task:
+            return None
+
+        label_result = await self.db.execute(select(Label).where(Label.id == label_id))
+        label = label_result.scalars().first()
+        if not label:
+            raise ValueError("Label not found")
+
+        if all(existing.id != label_id for existing in task.labels):
+            task.labels.append(label)
+            await self.db.commit()
+
+        return await self.get(task_id)
+
+    async def create_comment(
+        self,
+        task_id: str,
+        author_id: str,
+        payload: CommentCreate,
+    ) -> Optional[CommentRead]:
+        task_result = await self.db.execute(select(Task.id).where(Task.id == task_id))
+        if task_result.scalar_one_or_none() is None:
+            return None
+
+        comment = Comment(
+            content=payload.content,
+            task_id=task_id,
+            author_id=author_id,
+        )
+        self.db.add(comment)
+        await self.db.commit()
+
+        result = await self.db.execute(
+            select(Comment)
+            .where(Comment.id == comment.id)
+            .options(selectinload(Comment.author))
+        )
+        created = result.scalars().one()
+        return CommentRead.model_validate(created)
 
     async def delete(self, task_id: str) -> bool:
         result = await self.db.execute(select(Task).where(Task.id == task_id))

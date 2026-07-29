@@ -1,6 +1,8 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from .comment import CommentRead
+from .label import LabelRead
 from .project import ProjectRead
 from .user import UserRead
 
@@ -31,6 +33,8 @@ class TaskRead(TaskBase):
     id: str
     project: ProjectRead | None = None
     assignee: UserRead | None = None
+    labels: list[LabelRead] = Field(default_factory=list)
+    comments: list[CommentRead] = Field(default_factory=list)
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
