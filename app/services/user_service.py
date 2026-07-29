@@ -1,4 +1,3 @@
-from typing import List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,12 +29,12 @@ class UserService:
         await self.db.refresh(user)
         return UserRead.model_validate(user)
 
-    async def get(self, user_id: str) -> Optional[UserRead]:
+    async def get(self, user_id: str) -> UserRead | None:
         result = await self.db.execute(select(User).where(User.id == user_id))
         user = result.scalars().first()
         return UserRead.model_validate(user) if user else None
 
-    async def list(self) -> List[UserRead]:
+    async def list(self) -> list[UserRead]:
         result = await self.db.execute(select(User))
         users = result.scalars().all()
         return [UserRead.model_validate(user) for user in users]

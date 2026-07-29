@@ -5,9 +5,9 @@ Revises: 0001_add_workspace_and_roles
 Create Date: 2026-07-29 00:00:00.000000
 """
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 revision = "0002_add_labels_and_comments"
 down_revision = "0001_add_workspace_and_roles"

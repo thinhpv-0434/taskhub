@@ -1,19 +1,22 @@
-from typing import AsyncGenerator
+import logging
+from collections.abc import AsyncGenerator
 
 from fastapi import Depends, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..core.exceptions import ForbiddenException, UnauthorizedException
 from ..core.security import decode_token
 from ..db.models import User
 from ..db.session import get_db
 from ..services.auth_service import AuthService
-from ..services.task_service import TaskService
 from ..services.project_service import ProjectService
+from ..services.task_service import TaskService
 from ..services.user_service import UserService
 from ..services.workspace_service import WorkspaceService
-from ..core.exceptions import ForbiddenException, UnauthorizedException
+
+logger = logging.getLogger("taskhub.auth")
 
 
 async def get_task_service(db: AsyncSession = Depends(get_db)) -> AsyncGenerator[TaskService, None]:
@@ -44,17 +47,21 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db),
 ) -> User:
     if not credentials or credentials.scheme.lower() != "bearer":
+        logger.warning("authentication_denied reason=missing_or_invalid_scheme")
         raise UnauthorizedException(detail="Missing or invalid authorization token")
 
     payload = decode_token(credentials.credentials)
     if not payload or "sub" not in payload:
+        logger.warning("authentication_denied reason=invalid_or_expired_token")
         raise UnauthorizedException(detail="Invalid or expired token")
 
     result = await db.execute(select(User).where(User.id == payload["sub"]))
     user = result.scalars().first()
     if not user:
+        logger.warning("authentication_denied reason=user_not_found user_id=%s", payload["sub"])
         raise UnauthorizedException(detail="User not found")
 
+    logger.debug("authentication_succeeded user_id=%s", user.id)
     return user
 
 

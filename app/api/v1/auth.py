@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ...core.dependencies import get_auth_service
-from ...schemas.auth import LoginRequest, RegisterRequest, TokenResponse, RefreshRequest, LogoutRequest
+from ...schemas.auth import LoginRequest, LogoutRequest, RefreshRequest, RegisterRequest, TokenResponse
 from ...schemas.user import UserRead
 from ...services.auth_service import AuthService
 

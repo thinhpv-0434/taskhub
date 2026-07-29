@@ -1,15 +1,14 @@
-from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from ...core.dependencies import get_task_service, get_project_service, get_current_user, get_workspace_service
+from ...core.dependencies import get_current_user, get_project_service, get_task_service, get_workspace_service
 from ...core.permissions import ensure_workspace_access, is_admin
 from ...db.models import TaskStatus, User
 from ...schemas.comment import CommentCreate, CommentRead
 from ...schemas.task import TaskCreate, TaskRead, TaskUpdate
 from ...schemas.workspace import WorkspaceRole
-from ...services.task_service import TaskService
 from ...services.project_service import ProjectService
+from ...services.task_service import TaskService
 from ...services.workspace_service import WorkspaceService
 
 router = APIRouter(prefix="/api/v1", tags=["tasks"])
@@ -73,7 +72,7 @@ async def create_task_under_project(
     return task
 
 
-@router.get("/projects/{project_id}/tasks", response_model=List[TaskRead])
+@router.get("/projects/{project_id}/tasks", response_model=list[TaskRead])
 async def list_tasks_by_project(
     project_id: str,
     status_filter: TaskStatus | None = Query(default=None, alias="status"),
@@ -85,7 +84,7 @@ async def list_tasks_by_project(
     project_service: ProjectService = Depends(get_project_service),
     workspace_service: WorkspaceService = Depends(get_workspace_service),
     current_user: User = Depends(get_current_user),
-) -> List[TaskRead]:
+) -> list[TaskRead]:
     project = await project_service.get(project_id)
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")

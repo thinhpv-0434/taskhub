@@ -1,8 +1,7 @@
-from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from ...core.dependencies import get_project_service, get_current_user, get_workspace_service
+from ...core.dependencies import get_current_user, get_project_service, get_workspace_service
 from ...core.permissions import ensure_workspace_access, is_admin
 from ...db.models import User
 from ...schemas.project import ProjectCreate, ProjectRead, ProjectUpdate
@@ -59,11 +58,11 @@ async def create_project(
     return await service.create(payload)
 
 
-@router.get("/", response_model=List[ProjectRead])
+@router.get("/", response_model=list[ProjectRead])
 async def list_projects(
     service: ProjectService = Depends(get_project_service),
     current_user: User = Depends(get_current_user),
-) -> List[ProjectRead]:
+) -> list[ProjectRead]:
     return await service.list_for_user(current_user.id, is_admin=is_admin(current_user))
 
 
