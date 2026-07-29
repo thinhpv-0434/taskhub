@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 
 from ...core.dependencies import get_task_service
-from ...schemas.task import TaskCreate, TaskRead
 from ...core.exceptions import NotFoundException
+from ...schemas.task import TaskCreate, TaskRead
 
 router = APIRouter(prefix="/api/v1/tasks", tags=["tasks"])
 

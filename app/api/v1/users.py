@@ -1,12 +1,11 @@
-from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from ...core.dependencies import get_user_service, get_current_user, require_roles
-from ...schemas.user import UserCreate, UserRead, UserUpdate, UserRole
-from ...services.user_service import UserService
-from ...db.models import User
+from ...core.dependencies import get_current_user, get_user_service, require_roles
 from ...core.exceptions import NotFoundException
+from ...db.models import User
+from ...schemas.user import UserCreate, UserRead, UserRole, UserUpdate
+from ...services.user_service import UserService
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
@@ -23,8 +22,8 @@ async def create_user(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
 
-@router.get("/", response_model=List[UserRead])
-async def list_users(service: UserService = Depends(get_user_service), admin: User = Depends(require_roles(UserRole.ADMIN))) -> List[UserRead]:
+@router.get("/", response_model=list[UserRead])
+async def list_users(service: UserService = Depends(get_user_service), admin: User = Depends(require_roles(UserRole.ADMIN))) -> list[UserRead]:
     return await service.list()
 
 
@@ -43,7 +42,11 @@ async def update_me(
 
 
 @router.get("/id/{user_id}", response_model=UserRead)
-async def get_user(user_id: str, service: UserService = Depends(get_user_service)) -> UserRead:
+async def get_user(
+    user_id: str,
+    service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_user),
+) -> UserRead:
     user = await service.get(user_id)
     if not user:
         raise NotFoundException(detail="User not found")

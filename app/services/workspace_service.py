@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from ..db.models import User, Workspace, WorkspaceMember
-from ..schemas.workspace import WorkspaceCreate
+from ..schemas.workspace import WorkspaceCreate, WorkspaceRole
 
 
 class WorkspaceService:
@@ -43,7 +43,12 @@ class WorkspaceService:
         )
         return result.scalars().first()
 
-    async def add_member(self, workspace_id: str, user_id: str, role: str | None = None) -> Workspace:
+    async def add_member(
+        self,
+        workspace_id: str,
+        user_id: str,
+        role: WorkspaceRole = WorkspaceRole.EDITOR,
+    ) -> Workspace:
         workspace = await self.get(workspace_id)
         if not workspace:
             raise ValueError("Workspace not found")
@@ -62,7 +67,7 @@ class WorkspaceService:
         if existing_result.scalars().first():
             raise ValueError("User is already a workspace member")
 
-        membership = WorkspaceMember(workspace_id=workspace_id, user_id=user_id, role=role or "EDITOR")
+        membership = WorkspaceMember(workspace_id=workspace_id, user_id=user_id, role=role.value)
         self.db.add(membership)
         await self.db.commit()
         return await self.get(workspace_id)

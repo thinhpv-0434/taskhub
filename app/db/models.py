@@ -1,6 +1,6 @@
-import enum
 import uuid
 from datetime import datetime
+from enum import StrEnum
 
 from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Table, Text
 from sqlalchemy.orm import relationship
@@ -8,7 +8,7 @@ from sqlalchemy.orm import relationship
 from .base import Base
 
 
-class TaskStatus(str, enum.Enum):
+class TaskStatus(StrEnum):
     todo = "todo"
     in_progress = "in_progress"
     done = "done"

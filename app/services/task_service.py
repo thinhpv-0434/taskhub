@@ -1,10 +1,9 @@
-from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ..db.models import Comment, Label, Project, Task
+from ..db.models import Comment, Label, Project, Task, TaskStatus
 from ..schemas.comment import CommentCreate, CommentRead
 from ..schemas.task import TaskCreate, TaskRead
 
@@ -19,7 +18,7 @@ class TaskService:
         await self.db.commit()
         return await self.get(task.id)
 
-    async def get(self, task_id: str) -> Optional[TaskRead]:
+    async def get(self, task_id: str) -> TaskRead | None:
         result = await self.db.execute(
             select(Task)
             .where(Task.id == task_id)
@@ -38,7 +37,7 @@ class TaskService:
         project_id: str,
         page: int = 1,
         limit: int = 20,
-        status: str | None = None,
+        status: TaskStatus | None = None,
         priority: int | None = None,
         assignee_id: str | None = None,
     ) -> list[TaskRead]:
@@ -66,7 +65,7 @@ class TaskService:
         items = result.scalars().all()
         return [TaskRead.model_validate(i) for i in items]
 
-    async def update(self, task_id: str, payload) -> Optional[TaskRead]:
+    async def update(self, task_id: str, payload) -> TaskRead | None:
         result = await self.db.execute(select(Task).where(Task.id == task_id))
         task = result.scalars().first()
         if not task:
@@ -77,7 +76,7 @@ class TaskService:
         await self.db.commit()
         return await self.get(task_id)
 
-    async def add_label(self, task_id: str, label_id: str) -> Optional[TaskRead]:
+    async def add_label(self, task_id: str, label_id: str) -> TaskRead | None:
         result = await self.db.execute(
             select(Task)
             .where(Task.id == task_id)
@@ -103,7 +102,7 @@ class TaskService:
         task_id: str,
         author_id: str,
         payload: CommentCreate,
-    ) -> Optional[CommentRead]:
+    ) -> CommentRead | None:
         task_result = await self.db.execute(select(Task.id).where(Task.id == task_id))
         if task_result.scalar_one_or_none() is None:
             return None
