@@ -15,6 +15,7 @@ SQLAlchemy async và JWT authentication.
 - SQLite mặc định khi chạy local.
 - Request logging với `X-Request-ID` và `X-Process-Time`.
 - Ruff lint.
+- Redis cache cho danh sách Task theo Project, tự invalidate khi dữ liệu thay đổi.
 
 ## Yêu cầu
 
@@ -53,6 +54,7 @@ POSTGRES_USER=taskhub
 POSTGRES_PASSWORD=taskhub
 SECRET_KEY=replace-with-a-long-random-secret
 LOG_LEVEL=INFO
+CACHE_TTL_SECONDS=60
 ```
 
 Đổi `SECRET_KEY` trước khi dùng ngoài môi trường development. Nếu port 8000 đã
@@ -183,6 +185,7 @@ Mở <http://localhost:8000/docs>.
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | Thời hạn access token |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | `7` | Thời hạn refresh token |
 | `LOG_LEVEL` | `INFO` | Mức log: DEBUG, INFO, WARNING, ERROR |
+| `CACHE_TTL_SECONDS` | `60` | TTL cache danh sách Task; đặt `0` để tắt ghi cache |
 | `APP_PORT` | `8000` | Host port của app trong Docker Compose |
 | `POSTGRES_DB` | `taskhub` | Tên database PostgreSQL trong Compose |
 | `POSTGRES_USER` | `taskhub` | User PostgreSQL trong Compose |

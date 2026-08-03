@@ -1,11 +1,12 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from ...core.dependencies import get_current_user, get_project_service, get_workspace_service
+from ...core.dependencies import get_current_user, get_project_service, get_task_list_cache, get_workspace_service
 from ...core.permissions import ensure_workspace_access, is_admin
 from ...db.models import User
 from ...schemas.project import ProjectCreate, ProjectRead, ProjectUpdate
 from ...schemas.workspace import WorkspaceRole
+from ...services.cache_service import TaskListCache
 from ...services.project_service import ProjectService
 from ...services.workspace_service import WorkspaceService
 
@@ -86,6 +87,7 @@ async def update_project(
     payload: ProjectUpdate,
     service: ProjectService = Depends(get_project_service),
     workspace_service: WorkspaceService = Depends(get_workspace_service),
+    cache: TaskListCache = Depends(get_task_list_cache),
     current_user: User = Depends(get_current_user),
 ) -> ProjectRead:
     obj = await service.get(project_id)
@@ -107,6 +109,7 @@ async def update_project(
             (WorkspaceRole.OWNER, WorkspaceRole.EDITOR),
         )
     updated = await service.update(project_id, payload)
+    await cache.invalidate_project(project_id)
     return updated
 
 
@@ -115,6 +118,7 @@ async def delete_project(
     project_id: str,
     service: ProjectService = Depends(get_project_service),
     workspace_service: WorkspaceService = Depends(get_workspace_service),
+    cache: TaskListCache = Depends(get_task_list_cache),
     current_user: User = Depends(get_current_user),
 ) -> None:
     obj = await service.get(project_id)
@@ -127,4 +131,5 @@ async def delete_project(
         (WorkspaceRole.OWNER, WorkspaceRole.EDITOR),
     )
     await service.delete(project_id)
+    await cache.invalidate_project(project_id)
     return None
