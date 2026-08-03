@@ -1,22 +1,29 @@
 import logging
 from collections.abc import AsyncGenerator
 
-from fastapi import Depends, Security
+from fastapi import Depends, Request, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..core.config import CACHE_TTL_SECONDS
 from ..core.exceptions import ForbiddenException, UnauthorizedException
 from ..core.security import decode_token
 from ..db.models import User
 from ..db.session import get_db
 from ..services.auth_service import AuthService
+from ..services.cache_service import TaskListCache
 from ..services.project_service import ProjectService
 from ..services.task_service import TaskService
 from ..services.user_service import UserService
 from ..services.workspace_service import WorkspaceService
 
 logger = logging.getLogger("taskhub.auth")
+
+
+def get_task_list_cache(request: Request) -> TaskListCache:
+    redis = getattr(request.app.state, "redis", None)
+    return TaskListCache(redis, CACHE_TTL_SECONDS)
 
 
 async def get_task_service(db: AsyncSession = Depends(get_db)) -> AsyncGenerator[TaskService, None]:

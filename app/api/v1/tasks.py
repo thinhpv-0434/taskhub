@@ -1,12 +1,19 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from ...core.dependencies import get_current_user, get_project_service, get_task_service, get_workspace_service
+from ...core.dependencies import (
+    get_current_user,
+    get_project_service,
+    get_task_list_cache,
+    get_task_service,
+    get_workspace_service,
+)
 from ...core.permissions import ensure_workspace_access, is_admin
 from ...db.models import TaskStatus, User
 from ...schemas.comment import CommentCreate, CommentRead
 from ...schemas.task import TaskCreate, TaskRead, TaskUpdate
 from ...schemas.workspace import WorkspaceRole
+from ...services.cache_service import TaskListCache
 from ...services.project_service import ProjectService
 from ...services.task_service import TaskService
 from ...services.workspace_service import WorkspaceService
@@ -54,6 +61,7 @@ async def create_task_under_project(
     project_service: ProjectService = Depends(get_project_service),
     service: TaskService = Depends(get_task_service),
     workspace_service: WorkspaceService = Depends(get_workspace_service),
+    cache: TaskListCache = Depends(get_task_list_cache),
     current_user=Depends(get_current_user),
 ) -> TaskRead:
     project = await project_service.get(project_id)
@@ -69,6 +77,7 @@ async def create_task_under_project(
     data = payload.model_dump()
     data["project_id"] = project_id
     task = await service.create(TaskCreate.model_validate(data))
+    await cache.invalidate_project(project_id)
     return task
 
 
@@ -83,13 +92,25 @@ async def list_tasks_by_project(
     service: TaskService = Depends(get_task_service),
     project_service: ProjectService = Depends(get_project_service),
     workspace_service: WorkspaceService = Depends(get_workspace_service),
+    cache: TaskListCache = Depends(get_task_list_cache),
     current_user: User = Depends(get_current_user),
 ) -> list[TaskRead]:
     project = await project_service.get(project_id)
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
     await _ensure_project_access(project, current_user, workspace_service)
-    return await service.list_by_project(
+    cached = await cache.get(
+        project_id,
+        status=status_filter,
+        priority=priority,
+        assignee_id=assignee_id,
+        page=page,
+        limit=limit,
+    )
+    if cached is not None:
+        return cached
+
+    tasks = await service.list_by_project(
         project_id,
         page=page,
         limit=limit,
@@ -97,6 +118,16 @@ async def list_tasks_by_project(
         priority=priority,
         assignee_id=assignee_id,
     )
+    await cache.set(
+        project_id,
+        tasks,
+        status=status_filter,
+        priority=priority,
+        assignee_id=assignee_id,
+        page=page,
+        limit=limit,
+    )
+    return tasks
 
 
 @router.get("/tasks/{task_id}", response_model=TaskRead)
@@ -119,6 +150,7 @@ async def add_task_label(
     label_id: str,
     service: TaskService = Depends(get_task_service),
     workspace_service: WorkspaceService = Depends(get_workspace_service),
+    cache: TaskListCache = Depends(get_task_list_cache),
     current_user: User = Depends(get_current_user),
 ) -> TaskRead:
     existing = await service.get(task_id)
@@ -136,6 +168,8 @@ async def add_task_label(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     if not task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    if task.project:
+        await cache.invalidate_project(task.project.id)
     return task
 
 
@@ -149,6 +183,7 @@ async def create_task_comment(
     payload: CommentCreate,
     service: TaskService = Depends(get_task_service),
     workspace_service: WorkspaceService = Depends(get_workspace_service),
+    cache: TaskListCache = Depends(get_task_list_cache),
     current_user: User = Depends(get_current_user),
 ) -> CommentRead:
     existing = await service.get(task_id)
@@ -163,6 +198,8 @@ async def create_task_comment(
     comment = await service.create_comment(task_id, current_user.id, payload)
     if not comment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    if existing.project:
+        await cache.invalidate_project(existing.project.id)
     return comment
 
 
@@ -172,6 +209,7 @@ async def update_task(
     payload: TaskUpdate,
     service: TaskService = Depends(get_task_service),
     workspace_service: WorkspaceService = Depends(get_workspace_service),
+    cache: TaskListCache = Depends(get_task_list_cache),
     current_user: User = Depends(get_current_user),
 ) -> TaskRead:
     obj = await service.get(task_id)
@@ -184,6 +222,8 @@ async def update_task(
         (WorkspaceRole.OWNER, WorkspaceRole.EDITOR),
     )
     updated = await service.update(task_id, payload)
+    if obj.project:
+        await cache.invalidate_project(obj.project.id)
     return updated
 
 
@@ -192,6 +232,7 @@ async def delete_task(
     task_id: str,
     service: TaskService = Depends(get_task_service),
     workspace_service: WorkspaceService = Depends(get_workspace_service),
+    cache: TaskListCache = Depends(get_task_list_cache),
     current_user: User = Depends(get_current_user),
 ) -> None:
     obj = await service.get(task_id)
@@ -204,4 +245,6 @@ async def delete_task(
         (WorkspaceRole.OWNER, WorkspaceRole.EDITOR),
     )
     await service.delete(task_id)
+    if obj.project:
+        await cache.invalidate_project(obj.project.id)
     return None
